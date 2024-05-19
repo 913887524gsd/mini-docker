@@ -12,13 +12,14 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 set(PROJECT_DIR "${CMAKE_SOURCE_DIR}/..")
 
 include_directories("${PROJECT_DIR}/inc")
+include_directories("/usr/include/libnl3")
 add_compile_options(-Wall -Wshadow -Werror -Wno-format)
 
 file(GLOB_RECURSE SRC_FILES
     "${PROJECT_DIR}/src/*.cpp"
 )
 
-set(DYN_LIB)
+set(DYN_LIB nl-3 nl-route-3)
 
 set(EXE_NAME "mini-docker")
 add_executable(${EXE_NAME} ${SRC_FILES})

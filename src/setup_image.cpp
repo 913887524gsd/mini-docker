@@ -1,6 +1,7 @@
 #include <config.h>
 #include <setup.h>
 #include <typedef.h>
+#include <util.h>
 
 #include <bits/stdc++.h>
 #include <sys/stat.h>
@@ -13,6 +14,13 @@ char *mergeddir;
 static void recycle_image(void)
 {
     errexit(umount(mergeddir));
+    char *last_slash = NULL;
+    for (char *p = mergeddir ; *p ; p++)
+        if (*p == '/')
+            last_slash = p;
+    *last_slash = '\0';
+    errexit(rmdir_recursive(mergeddir, 0));
+    free(mergeddir);
 }
 
 void setup_image(const char *imagedir, char **rootdir)
