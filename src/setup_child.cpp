@@ -43,11 +43,8 @@ int IPC_recv(const void **buf)
     return 0;
 }
 
-static int child_func(void *args)
+static void create_IPC(int *readfd, int *writefd)
 {
-    void **arglist = (void **)args;
-    int *readfd = (int *)arglist[2];
-    int *writefd = (int *)arglist[1];
     close(readfd[1]);
     IPC_read = fdopen(readfd[0], "r");
     if (IPC_read == NULL) {
@@ -60,24 +57,35 @@ static int child_func(void *args)
         perror("fdopen");
         exit(EXIT_FAILURE);
     }
-    setup_fs((const char *)arglist[0]);
     free(readfd);
     free(writefd);
+}
+
+static int child_func(void *args)
+{
+    void **arglist = (void **)args;
+    int *readfd = (int *)arglist[1];
+    int *writefd = (int *)arglist[0];
+    create_IPC(readfd, writefd);
     free(arglist);
+    setup_fs();
     container_setup_net();
-    execl("/bin/bash", NULL);
+    char **argv = (char **)malloc(command.size() * sizeof(const char *));
+    for (size_t i = 0 ; i < command.size() ; i++)
+        argv[i] = (char *)command[i].c_str();
+    execv(argv[0], argv);
     errexit(-1);
     return 0;
 }
 
 void forcekill_child(int state, void *pid)
 {
-    if (state != 0) {
+    if (state != EXIT_SUCCESS) {
         kill((pid_t)(size_t)pid, SIGKILL);
     }
 }
 
-pid_t setup_child(const char *rootdir)
+pid_t setup_child()
 {
     char *child_stack = (char *)mmap(NULL, 4096 * 4, PROT_READ | PROT_WRITE, 
         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -89,29 +97,15 @@ pid_t setup_child(const char *rootdir)
     int *writefd = (int *)malloc(2 * sizeof(int));
     pipe2(readfd, O_CLOEXEC);
     pipe2(writefd, O_CLOEXEC);
-    void **arglist = (void **)malloc(3 * sizeof(void *));
-    arglist[0] = (void *)rootdir;
-    arglist[1] = (void *)readfd;
-    arglist[2] = (void *)writefd;
+    void **arglist = (void **)malloc(2 * sizeof(void *));
+    arglist[0] = (void *)readfd;
+    arglist[1] = (void *)writefd;
     int pid = clone(child_func, child_stack + 4096 * 4,  
         CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWCGROUP | SIGCHLD, 
         (void *)arglist, NULL, NULL, NULL);
     errexit(pid);
-    close(readfd[1]);
-    IPC_read = fdopen(readfd[0], "r");
-    if (IPC_read == NULL) {
-        perror("fdopen");
-        exit(EXIT_FAILURE);
-    }
-    close(writefd[0]);
-    IPC_write = fdopen(writefd[1], "w");
-    if (IPC_write == NULL) {
-        perror("fdopen");
-        exit(EXIT_FAILURE);
-    }
     errexit(on_exit(forcekill_child, (void *)(size_t)pid));
-    free(readfd);
-    free(writefd);
+    create_IPC(readfd, writefd);
     free(arglist);
     return pid;
 }

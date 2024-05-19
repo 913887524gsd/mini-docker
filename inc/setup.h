@@ -1,11 +1,22 @@
 #pragma once
 
 #include <unistd.h>
+#include <string>
+#include <vector>
 
+extern char *runtimedir;
 extern char *mergeddir;
 
-void setup_fs(const char *rootdir);
-void setup_image(const char *imagedir, char **rootdir);
-pid_t setup_child(const char *rootdir);
+extern char *imagedir;
+
+extern double cpu_limit;
+extern size_t memory_limit;
+extern size_t blkio_limit;
+extern std::string image;
+extern std::vector<std::string> command;
+
+void setup_fs();
+void setup_image();
+pid_t setup_child();
 void host_setup_net(pid_t pid);
 void container_setup_net(void);

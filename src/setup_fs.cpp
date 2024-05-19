@@ -67,9 +67,9 @@ static void setup_dns(void)
     fclose(fp);
 }
 
-void setup_fs(const char *rootdir)
+void setup_fs()
 {
-    setup_chroot(rootdir);
+    setup_chroot(mergeddir);
     setup_mount();
     setup_dns();
 }

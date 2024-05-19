@@ -9,47 +9,56 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+char *runtimedir;
 char *mergeddir;
 
 static void recycle_image(void)
 {
     errexit(umount(mergeddir));
-    char *last_slash = NULL;
-    for (char *p = mergeddir ; *p ; p++)
-        if (*p == '/')
-            last_slash = p;
-    *last_slash = '\0';
-    errexit(rmdir_recursive(mergeddir, 0));
+    errexit(rmdir_recursive(runtimedir, 0));
     free(mergeddir);
+    free(runtimedir);
 }
 
-void setup_image(const char *imagedir, char **rootdir)
+static void check_image(void)
 {
-    *rootdir = NULL;
-    errexit(asprintf(rootdir, "%s/XXXXXX", RUNTIME_DIR));
-    *rootdir = mkdtemp(*rootdir);
-    errexit(fprintf(stderr, "runtime dir: %s\n", *rootdir));
-    if (*rootdir == NULL) {
-        perror("mkdtemp");
+    imagedir = NULL;
+    errexit(asprintf(&imagedir, "%s/%s", IMAGE_DIR, image.c_str()));
+    errexit(access(imagedir, F_OK));
+}
+
+static void generate_runtime_directory(void)
+{
+    runtimedir = NULL;
+    errexit(asprintf(&runtimedir, "%s/XXXXXX", RUNTIME_DIR));
+    runtimedir = mkdtemp(runtimedir);
+    fprintf(stderr, "runtime dir: %s\n", runtimedir);
+    if (runtimedir == NULL) {
+        fprintf(stderr, "mkdtemp failed: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
-    char *lowerdir = NULL;
-    char *upperdir = NULL;
-    char *workerdir = NULL;
+}
+
+void setup_image()
+{
+    char *lowerdir = NULL, *upperdir = NULL, *workdir = NULL;
     char *data = NULL;
-    errexit(asprintf(&lowerdir, "%s/lower", *rootdir));
+
+    check_image();
+    generate_runtime_directory();
+    errexit(asprintf(&lowerdir, "%s/lower", runtimedir));
     errexit(symlink(imagedir, lowerdir));
-    errexit(asprintf(&upperdir, "%s/upper", *rootdir));
+    errexit(asprintf(&upperdir, "%s/upper", runtimedir));
     errexit(mkdir(upperdir, 0755));
-    errexit(asprintf(&workerdir, "%s/worker", *rootdir));
-    errexit(mkdir(workerdir, 0755));
-    errexit(asprintf(&mergeddir, "%s/merged", *rootdir));
+    errexit(asprintf(&workdir, "%s/worker", runtimedir));
+    errexit(mkdir(workdir, 0755));
+    errexit(asprintf(&mergeddir, "%s/merged", runtimedir));
     errexit(mkdir(mergeddir, 0755));
-    errexit(asprintf(&data, "lowerdir=%s,upperdir=%s,workdir=%s", lowerdir, upperdir, workerdir));
+    errexit(asprintf(&data, "lowerdir=%s,upperdir=%s,workdir=%s", lowerdir, upperdir, workdir));
     errexit(mount("overlay", mergeddir, "overlay", 0, data));
     errexit(atexit(recycle_image));
     free(lowerdir);
     free(upperdir);
-    free(workerdir);
+    free(workdir);
     free(data);
 }
