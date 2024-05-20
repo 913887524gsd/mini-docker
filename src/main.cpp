@@ -10,9 +10,11 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 char *imagedir;
 
+std::vector<std::pair<std::string, std::string>> volumn;
 double cpu_limit;
 size_t memory_limit;
 size_t blkio_limit;
@@ -24,6 +26,11 @@ static void init_runtime_enviroment(void)
     errexit(mkdir_recursive(IMAGE_DIR, 0755));
     errexit(mkdir_recursive(RUNTIME_DIR, 0755));
     errexit(mkdir_recursive(NET_DIR, 0755));
+    // ignore SIGTTOU for tcsetpgrp use
+    struct sigaction act;
+    act.sa_flags = 0;
+    act.sa_handler = SIG_IGN;
+    errexit(sigaction(SIGTTOU, &act, NULL));
 }
 
 static bool is_valid_scale_arg(const std::string &arg, size_t *ret)
@@ -68,6 +75,11 @@ static void arg_parse(int argc, char *argv[])
     try {
         TCLAP::CmdLine cmd("a mini docker for study use");
 
+        TCLAP::MultiArg<std::string> __volumn(
+            "v", "volumn", "bind mount (usage: hostpath:containerpath)",
+            false, "string"
+        );
+        cmd.add(__volumn);
         TCLAP::ValueArg<double> __cpu(
             "c", "cpu", "cpu limit(for example 0.5 means container will use at most 0.5 cpu cores' performance)",
             false, -1, "float"
@@ -93,6 +105,16 @@ static void arg_parse(int argc, char *argv[])
         cmd.add(__command);
         cmd.parse(argc, argv);
         
+        for (auto &str : __volumn.getValue()) {
+            size_t pos = str.find_first_of(':');
+            if (pos == std::string::npos) {
+                throw TCLAP::ArgException("invalid volumn");
+            } else {
+                std::string str1 = str.substr(0, pos);
+                std::string str2 = str.substr(pos + 1);
+                volumn.push_back(std::make_pair(str1, str2));
+            }
+        }
         cpu_limit = __cpu.getValue();
         if (!is_valid_scale_arg(__memory.getValue(), &memory_limit))
             throw TCLAP::ArgException("unknown scale value");
@@ -118,8 +140,9 @@ int main(int argc, char *argv[])
     setup_image();
     pid_t pid = setup_child();
     host_setup_net(pid);
-    if (waitpid(pid, NULL, 0) != pid) {
-        perror("waitpid");
-        exit(EXIT_FAILURE);
-    }
+    errexit(waitpid(pid, NULL, 0));
+    // get back terminal control
+    // because child process's sid is not same with parent process
+    // it's need to ignore SIGTTOU forbidding being stopped
+    errexit(tcsetpgrp(STDIN_FILENO, getpgid(0)));
 }

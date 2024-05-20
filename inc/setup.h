@@ -9,6 +9,7 @@ extern char *mergeddir;
 
 extern char *imagedir;
 
+extern std::vector<std::pair<std::string, std::string>> volumn;
 extern double cpu_limit;
 extern size_t memory_limit;
 extern size_t blkio_limit;
