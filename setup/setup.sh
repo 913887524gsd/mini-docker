@@ -19,6 +19,7 @@ ROOT_DIR="/etc/mini-docker"
 IMAGE_DIR="${ROOT_DIR}/images"
 
 mkdir -p ${ROOT_DIR}
+cp resolv.conf ${ROOT_DIR}
 
 rm -rf ${IMAGE_DIR}
 mkdir -p ${IMAGE_DIR}

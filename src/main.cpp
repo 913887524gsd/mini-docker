@@ -1,6 +1,7 @@
 #include <config.h>
 #include <typedef.h>
 #include <setup.h>
+#include <IPC.h>
 #include <util.h>
 #include <tclap/CmdLine.h>
 
@@ -26,6 +27,15 @@ static void init_runtime_enviroment(void)
     errexit(mkdir_recursive(IMAGE_DIR, 0755));
     errexit(mkdir_recursive(RUNTIME_DIR, 0755));
     errexit(mkdir_recursive(NET_DIR, 0755));
+    if (mkdir(CGROUP_RUNTIME_DIR(CPU), 0755) == -1 && errno != EEXIST) {
+        fprintf(stderr, "mkdir failed: %s\n", strerror(errno));
+    }
+    if (mkdir(CGROUP_RUNTIME_DIR(MEM), 0755) == -1 && errno != EEXIST) {
+        fprintf(stderr, "mkdir failed: %s\n", strerror(errno));
+    }
+    if (mkdir(CGROUP_RUNTIME_DIR(BLK), 0755) == -1 && errno != EEXIST) {
+        fprintf(stderr, "mkdir failed: %s\n", strerror(errno));
+    }
     // ignore SIGTTOU for tcsetpgrp use
     struct sigaction act;
     act.sa_flags = 0;
@@ -62,11 +72,11 @@ static bool is_valid_scale_arg(const std::string &arg, size_t *ret)
             *ret *= 1024 * 1024 * 1024;
         else
             assert(0);
-        return pos == __arg.size(); // 确保整个字符串都被转换
+        return pos == __arg.size();
     } catch (const std::invalid_argument& e) {
-        return false; // 字符串不是有效的整数
+        return false;
     } catch (const std::out_of_range& e) {
-        return false; // 数字超出范围
+        return false;
     }
 }
 
@@ -116,6 +126,8 @@ static void arg_parse(int argc, char *argv[])
             }
         }
         cpu_limit = __cpu.getValue();
+        if (cpu_limit < 0 && cpu_limit != -1)
+            throw TCLAP::ArgException("unknown cpu value");
         if (!is_valid_scale_arg(__memory.getValue(), &memory_limit))
             throw TCLAP::ArgException("unknown scale value");
         if (!is_valid_scale_arg(__blkio.getValue(), &blkio_limit))
@@ -137,12 +149,16 @@ int main(int argc, char *argv[])
     }
     init_runtime_enviroment();
     arg_parse(argc, argv);
+    volumn.push_back(std::make_pair(DNS_FILE, "/etc/resolv.conf"));
     setup_image();
     pid_t pid = setup_child();
     host_setup_net(pid);
+    setup_cgroup(pid);
+    IPC_send_sync();
+    IPC_free();
     errexit(waitpid(pid, NULL, 0));
     // get back terminal control
     // because child process's sid is not same with parent process
-    // it's need to ignore SIGTTOU forbidding being stopped
+    // it's need to ignore SIGTTOU preventing being stopped
     errexit(tcsetpgrp(STDIN_FILENO, getpgid(0)));
 }

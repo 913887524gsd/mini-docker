@@ -1,5 +1,6 @@
 #include <config.h>
 #include <typedef.h>
+#include <IPC.h>
 #include <setup.h>
 
 #include <bits/stdc++.h>
@@ -11,6 +12,11 @@
 
 static FILE *IPC_read = NULL, *IPC_write = NULL;
 
+void IPC_free(void)
+{
+    errexit(fclose(IPC_read));
+    errexit(fclose(IPC_write));
+}
 int IPC_send(const void *buf, size_t length)
 {
     while (fwrite(&length, sizeof(length), 1, IPC_write) != 1) {
@@ -70,6 +76,8 @@ static int child_func(void *args)
     free(arglist);
     setup_fs();
     container_setup_net();
+    IPC_recv_sync();
+    IPC_free();
     char **argv = (char **)malloc(command.size() * sizeof(const char *));
     for (size_t i = 0 ; i < command.size() ; i++)
         argv[i] = (char *)command[i].c_str();
@@ -78,14 +86,14 @@ static int child_func(void *args)
     return 0;
 }
 
-void forcekill_child(int state, void *pid)
+static void force_kill(int state, void *pid)
 {
     if (state != EXIT_SUCCESS) {
         kill((pid_t)(size_t)pid, SIGKILL);
     }
 }
 
-pid_t setup_child()
+pid_t setup_child(void)
 {
     char *child_stack = (char *)mmap(NULL, 4096 * 4, PROT_READ | PROT_WRITE, 
         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -104,7 +112,7 @@ pid_t setup_child()
         CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWCGROUP | SIGCHLD, 
         (void *)arglist, NULL, NULL, NULL);
     errexit(pid);
-    errexit(on_exit(forcekill_child, (void *)(size_t)pid));
+    errexit(on_exit(force_kill, (void *)(size_t)pid));
     create_IPC(readfd, writefd);
     free(arglist);
     return pid;

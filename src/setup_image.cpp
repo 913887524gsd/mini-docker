@@ -13,10 +13,13 @@
 char *runtimedir = NULL;
 char *mergeddir = NULL;
 
+char *runtimeID = NULL;
+
 static void remove_runtime_directory(void)
 {
     errexit(rmdir_recursive(runtimedir, 0));
     free(runtimedir);
+    runtimeID = NULL;
 }
 
 static void generate_runtime_directory(void)
@@ -28,6 +31,7 @@ static void generate_runtime_directory(void)
         fprintf(stderr, "mkdtemp failed: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
+    runtimeID = runtimedir + strlen(runtimedir) - 6;
     errexit(atexit(remove_runtime_directory));
 }
 
@@ -93,7 +97,7 @@ static void setup_volumn(void)
     }
 }
 
-void setup_image()
+void setup_image(void)
 {
     errexit(asprintf(&imagedir, "%s/%s", IMAGE_DIR, image.c_str()));
     generate_runtime_directory();

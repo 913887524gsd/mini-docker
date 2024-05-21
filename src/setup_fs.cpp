@@ -50,26 +50,8 @@ static void setup_mount(void)
     errexit(mount("sysfs", "/sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_RELATIME, NULL));
 }
 
-static void setup_dns(void)
-{
-    FILE *fp = fopen("/etc/resolv.conf", "a");
-    const char *dns = "\nnameserver 8.8.8.8\nnameserver 8.8.4.4\n";
-    
-    if (fp == NULL) {
-        fprintf(stderr, "can not find dns file /etc/resolv.conf");
-        return;
-    }
-    if (fwrite(dns, strlen(dns), 1, fp) != 1) {
-        fprintf(stderr, "fwrite failed: %s", strerror(errno));
-        fclose(fp);
-        exit(EXIT_FAILURE);
-    }
-    fclose(fp);
-}
-
-void setup_fs()
+void setup_fs(void)
 {
     setup_chroot(mergeddir);
     setup_mount();
-    setup_dns();
 }

@@ -144,7 +144,7 @@ static int netdev_bind_bridge(struct nl_sock *sock, const char *if_name)
         fprintf(stderr, "if_nametoindex failed: %s\n", strerror(errno));
         return -1;
     }
-    if ((master_if_index = if_nametoindex(NETBRIDGE_DEV)) == 0) {
+    if ((master_if_index = if_nametoindex(BRIDGE_DEV)) == 0) {
         fprintf(stderr, "if_nametoindex failed: %s\n", strerror(errno));
         return -1;
     }
@@ -231,7 +231,7 @@ static int setup_default_route(struct nl_sock *sock, const char *if_name)
     nl_addr_parse("0.0.0.0/0", AF_INET, &dst);
     rtnl_route_set_dst(route, dst);
 
-    nl_addr_parse(NETBRIDGE_ADDR, AF_INET, &gw);
+    nl_addr_parse(BRIDGE_ADDR, AF_INET, &gw);
     rtnl_route_nh_set_gateway(nh, gw);
     
     rtnl_route_nh_set_ifindex(nh, if_index);
