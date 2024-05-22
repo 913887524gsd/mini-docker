@@ -70,7 +70,7 @@ static void remove_volumn(int, void *container_path)
 
 static void setup_volumn(void)
 {
-    for (auto &[h,c] : volumn) {
+    for (auto &[h,c] : volumns) {
         const char *host_path = h.c_str();
         char *container_path = NULL;
         char *dir_path = NULL;

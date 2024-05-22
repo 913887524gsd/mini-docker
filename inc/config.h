@@ -20,3 +20,5 @@
 
 #define __CGROUP_RUNTIME_DIR        "mini-docker.slice"
 #define CGROUP_RUNTIME_DIR(TYPE)    CGROUP_##TYPE "/" __CGROUP_RUNTIME_DIR
+
+#define IPTABLE_CHAIN   "MINI_DOCKER"

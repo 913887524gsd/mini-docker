@@ -5,9 +5,32 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <errno.h>
 #include <string.h>
 #include <dirent.h>
+
+void atexit_do_command(int, void *comm)
+{
+    system((const char *)comm);
+    free(comm);
+}
+
+int pidfd_open(pid_t pid, unsigned int flags)
+{
+    ssize_t ret = syscall(__NR_pidfd_open, pid, flags);
+    if (-4096 < ret && ret < 0)
+        errno = ret, ret = -1;
+    return ret;
+}
+
+int pidfd_send_signal(int pidfd, int sig, siginfo_t *info, unsigned int flags)
+{
+    ssize_t ret = syscall(__NR_pidfd_send_signal, pidfd, sig, info, flags);
+    if (-4096 < ret && ret < 0)
+        errno = ret, ret = -1;
+    return ret;
+}
 
 int mkdir_recursive(const char *path, mode_t mode)
 {

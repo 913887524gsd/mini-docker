@@ -305,6 +305,8 @@ void host_setup_net(pid_t pid)
         fprintf(stderr, "netdev_set_up failed\n");
         goto err4;
     }
+    setup_port(ip_addr);
+
     free(ip_addr);
     free((void *)veth[0]);
     free((void *)veth[1]);

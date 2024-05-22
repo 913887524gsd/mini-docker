@@ -2,6 +2,7 @@
 #include <typedef.h>
 #include <IPC.h>
 #include <setup.h>
+#include <util.h>
 
 #include <bits/stdc++.h>
 #include <unistd.h>
@@ -86,10 +87,10 @@ static int child_func(void *args)
     return 0;
 }
 
-static void force_kill(int state, void *pid)
+static void force_kill(int state, void *)
 {
     if (state != EXIT_SUCCESS) {
-        kill((pid_t)(size_t)pid, SIGKILL);
+        pidfd_send_signal(pidfd, SIGHUP, NULL, 0);
     }
 }
 
@@ -112,7 +113,7 @@ pid_t setup_child(void)
         CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWCGROUP | SIGCHLD, 
         (void *)arglist, NULL, NULL, NULL);
     errexit(pid);
-    errexit(on_exit(force_kill, (void *)(size_t)pid));
+    errexit(on_exit(force_kill, NULL));
     create_IPC(readfd, writefd);
     free(arglist);
     return pid;

@@ -19,7 +19,7 @@ file(GLOB_RECURSE SRC_FILES
     "${PROJECT_DIR}/src/*.cpp"
 )
 
-set(DYN_LIB nl-3 nl-route-3)
+set(DYN_LIB nl-3 nl-route-3 pthread)
 
 set(EXE_NAME "mini-docker")
 add_executable(${EXE_NAME} ${SRC_FILES})
