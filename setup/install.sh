@@ -25,6 +25,8 @@ cp resolv.conf ${ROOT_DIR}
 
 if [ ! -d "${IMAGE_DIR}" ]; then
     mkdir -p ${IMAGE_DIR}
-    tar xzf centos.tar.gz --directory=${IMAGE_DIR}
-    tar xzf test.tar.gz --directory=${IMAGE_DIR}
+    tars=`ls *.tar.gz`
+    for tar in ${tars}; do
+        tar xzf ${tar} --directory=${IMAGE_DIR}
+    done
 fi

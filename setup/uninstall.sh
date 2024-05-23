@@ -9,10 +9,17 @@ cd `dirname $0`
 
 source ./config.sh
 
-containers=`ls ${RUNTIME_DIR}`
-if [[ -n${containers} ]]; then
-    echo "There are still running containers: ${containers}"
-    exit 1
+if [[ ! -d ${ROOT_DIR} ]]; then
+    echo "mini-docker has been uninstalled"
+    exit 0
+fi
+
+if [[ -d ${RUNTIME_DIR} ]]; then
+    containers=`ls ${RUNTIME_DIR}`
+    if [[ -n ${containers} ]]; then
+        echo "There are still running containers: ${containers}"
+        exit 1
+    fi
 fi
 
 ip link delete ${BR_DEV}
