@@ -78,7 +78,7 @@ static void setup_volumn(void)
         errexit(asprintf(&container_path, "%s/%s", mergeddir, c.c_str()));
         errexit(access(host_path, F_OK));
         dir_path = dirname(strdup(container_path));
-        if (strlen(dir_path) <= strlen(mergeddir)) {
+        if (strlen(dir_path) < strlen(mergeddir)) {
             fprintf(stderr, "invalid container path: %s\n", c.c_str());
             exit(EXIT_FAILURE);
         }

@@ -70,6 +70,8 @@ static int create_signal_fd(void)
     int fd;
     sigset_t sig;
     sigfillset(&sig);
+    sigdelset(&sig, SIGTSTP);
+    sigdelset(&sig, SIGCONT);
     if (sigprocmask(SIG_BLOCK, &sig, NULL) == -1) {
         fprintf(stderr, "sigprocmask failed: %s\n", strerror(errno));
         return -1;

@@ -32,3 +32,7 @@ iptables -t nat -X ${CHAIN}
 iptables -t nat -D POSTROUTING -s ${BR_ADDR}/24 ! -o ${BR_DEV} -j MASQUERADE
 
 rm -r ${ROOT_DIR}
+
+rmdir /sys/fs/cgroup/cpu/mini-docker.slice
+rmdir /sys/fs/cgroup/memory/mini-docker.slice
+rmdir /sys/fs/cgroup/blkio/mini-docker.slice

@@ -110,9 +110,12 @@ pid_t setup_child(void)
     arglist[0] = (void *)readfd;
     arglist[1] = (void *)writefd;
     int pid = clone(child_func, child_stack + 4096 * 4,  
-        CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWCGROUP | SIGCHLD, 
+        CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | 
+        CLONE_NEWUTS | CLONE_NEWCGROUP | SIGCHLD, 
         (void *)arglist, NULL, NULL, NULL);
     errexit(pid);
+    // after cloning, this address is useless for host process
+    errexit(munmap(child_stack, 4096 * 4));
     errexit(on_exit(force_kill, NULL));
     create_IPC(readfd, writefd);
     free(arglist);
