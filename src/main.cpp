@@ -92,27 +92,27 @@ static void arg_parse(int argc, char *argv[])
         TCLAP::CmdLine cmd("a mini docker for study use");
 
         TCLAP::MultiArg<std::string> __volumn(
-            "v", "volumn", "bind mount (usage: hostpath:containerpath)",
+            "v", "volumn", "bind mount (usage: -v /a:/b host's /a file will be binded to container's /b)",
             false, "string"
         );
         cmd.add(__volumn);
         TCLAP::MultiArg<std::string> __port(
-            "p", "port", "IPV4 tcp port transmit (usage: host port:container port -p 80:80)",
+            "p", "port", "IPV4 tcp port transmit (usage: -p 8080:80, host's 8080 port will be transmitted to container's 80 port)",
             false, "string"
         );
         cmd.add(__port);
         TCLAP::ValueArg<double> __cpu(
-            "c", "cpu", "cpu limit(for example 0.5 means container will use at most 0.5 cpu cores' performance)",
+            "c", "cpu", "cpu limit(usage: -c 0.5, container will use 0.5 cpu cores)",
             false, -1, "float"
         );
         cmd.add(__cpu);
         TCLAP::ValueArg<std::string> __memory(
-            "m", "memory", "memory limit(a integer with a scale identifier:k/m/g)",
+            "m", "memory", "memory limit, an integer with a scale identifier:k/m/g(usage: -m 10m)",
             false, "", "string"
         );
         cmd.add(__memory);
         TCLAP::ValueArg<std::string> __blkio(
-            "b", "blkio", "blkio limit, both read/write(a integer with a scale identifier:k/m/g)",
+            "b", "blkio", "blkio limit, both read/write, an integer with a scale identifier:k/m/g(usage: -b 10m)",
             false, "", "string"
         );
         cmd.add(__blkio);

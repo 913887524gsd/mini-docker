@@ -156,6 +156,53 @@ static int add_to_epoll(int epoll_fd, int fd, int events)
     return epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
 }
 
+static int socket_transmit(int send_fd, int recv_fd)
+{
+    int write_tries;
+    ssize_t readc, writec;
+    char buf[512];
+    while (1) {
+        do {
+            if ((readc = read(recv_fd, buf, 512)) == -1) {
+                if (errno == EINTR) {
+                    continue;
+                } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    return 0; // finished
+                } else {
+                    return -1;
+                }
+            } else {
+                break;
+            }
+        } while (1);
+        
+        if(readc == 0)
+            return 1;
+        write_tries = 0;
+
+        do {
+            if ((writec = write(send_fd, buf, readc)) == -1) {
+                if (errno == EINTR) {
+                    continue;
+                } else {
+                    return -1;
+                }
+            } else {
+                if (writec == 0) {
+                    return 1;
+                } else if (++write_tries == 10) {
+                    return -1;
+                } else if (writec < readc) {
+                    memmove(buf, buf + writec, readc - writec);
+                    readc -= writec;
+                } else {
+                    break;
+                }
+            }
+        } while (1);
+    }
+}
+
 // trasmit port have to abort
 // for transmit threads, it's a big problem to report error
 // so it's need to wait for main thread to exit(get back terminal control)
@@ -219,55 +266,43 @@ static void *port_transmit(void *arg)
                 }
                 peerfd[recv_fd] = send_fd;
                 peerfd[send_fd] = recv_fd;
-                if (add_to_epoll(epoll_fd, send_fd, EPOLLIN | EPOLLET | EPOLLRDHUP) == -1) {
+                if (add_to_epoll(epoll_fd, send_fd, EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLHUP) == -1) {
                     atexit_report_error("add_to_epoll failed: %s\n");
                     goto error;
                 }
-                if (add_to_epoll(epoll_fd, recv_fd, EPOLLIN | EPOLLET | EPOLLRDHUP) == -1) {
+                if (add_to_epoll(epoll_fd, recv_fd, EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLHUP) == -1) {
                     atexit_report_error("add_to_epoll failed: %s\n");
                     goto error;
                 }
             } else if (ev->data.fd == sigfd) {
                 struct signalfd_siginfo info;
                 read(sigfd, &info, sizeof(info));
-                if (info.ssi_signo == SIGTERM) {
+                if (info.ssi_signo == SIGTERM)
                     signaled = 1;
-                }
             } else {
-                ssize_t count;
-                char buf[512];
+                int closed = 0;
                 int recv_fd, send_fd;
                 
                 recv_fd = ev->data.fd;
                 send_fd = peerfd[recv_fd];
-                if (ev->events & EPOLLRDHUP) {
+                if (ev->events & (EPOLLRDHUP | EPOLLHUP)) {
+                    closed = 1;
+                } else {
+                    int ret = socket_transmit(send_fd, recv_fd);
+                    if (ret == -1) {
+                        atexit_report_error("socket_transmit failed: %s\n");
+                        goto error;
+                    } else if (ret == 1) {
+                        closed = 1;
+                    }
+                }
+                if (closed) {
+                    if (peerfd.find(recv_fd) == peerfd.end())
+                        continue; // reciever and sender are all closed
                     peerfd.erase(recv_fd);
                     peerfd.erase(send_fd);
                     close(recv_fd);
                     close(send_fd);
-                } else {
-                    while (1) {
-                        count = read(recv_fd, buf, 512);
-                        if (count == -1) {
-                            if (errno == EINTR) {
-                                continue;
-                            } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                                break;
-                            } else {
-                                atexit_report_error("read failed: %s\n");
-                                goto error;
-                            }
-                        }
-                        count = write(send_fd, buf, count);
-                        if (count == -1) {
-                            if (errno == EINTR) {
-                                continue;
-                            } else {
-                                atexit_report_error("write failed");
-                                goto error;
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -294,9 +329,7 @@ static void kill_port_transmit(int, void *arg)
 {
     int err;
     pthread_t tid = (pthread_t)arg;
-    if ((err = pthread_kill(tid, SIGTERM)) != 0) {
-        fprintf(stderr, "pthread_kill failed: %s\n", strerror(err));
-    }
+    pthread_kill(tid, SIGTERM);
     if ((err = pthread_join(tid, NULL)) != 0) {
         fprintf(stderr, "pthread_join failed: %s\n", strerror(err));
     }
