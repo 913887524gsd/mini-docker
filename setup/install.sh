@@ -13,6 +13,12 @@ ip link add ${BR_DEV} type bridge
 ip link set ${BR_DEV} up
 ip addr add ${BR_ADDR}/24 dev ${BR_DEV}
 
+sysctl -w net.ipv4.ip_forward=1
+
+iptables -t filter -A FORWARD -j ACCEPT -o ${BR_DEV}
+iptables -t filter -A FORWARD -j ACCEPT -i ${BR_DEV} ! -o ${BR_DEV}
+iptables -t filter -A FORWARD -j ACCEPT -i ${BR_DEV} -o ${BR_DEV}
+
 iptables -t nat -N ${CHAIN}
 iptables -t nat -A ${CHAIN} -j RETURN -i ${BR_DEV}
 iptables -t nat -A PREROUTING -j ${CHAIN} -m addrtype --dst-type LOCAL

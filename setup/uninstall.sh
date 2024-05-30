@@ -22,7 +22,9 @@ if [[ -d ${RUNTIME_DIR} ]]; then
     fi
 fi
 
-ip link delete ${BR_DEV}
+iptables -t filter -D FORWARD -j ACCEPT -o ${BR_DEV}
+iptables -t filter -D FORWARD -j ACCEPT -i ${BR_DEV} ! -o ${BR_DEV}
+iptables -t filter -D FORWARD -j ACCEPT -i ${BR_DEV} -o ${BR_DEV}
 
 iptables -t nat -D OUTPUT -j ${CHAIN} ! -d localhost/8 -m addrtype --dst-type LOCAL
 iptables -t nat -D PREROUTING -j ${CHAIN} -m addrtype --dst-type LOCAL
@@ -30,6 +32,8 @@ iptables -t nat -F ${CHAIN}
 iptables -t nat -X ${CHAIN}
 
 iptables -t nat -D POSTROUTING -s ${BR_ADDR}/24 ! -o ${BR_DEV} -j MASQUERADE
+
+ip link delete ${BR_DEV}
 
 rm -r ${ROOT_DIR}
 

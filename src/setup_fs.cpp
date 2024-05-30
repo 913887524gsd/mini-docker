@@ -19,7 +19,7 @@ static void setup_chroot(const char *rootdir)
 static void setup_mount_dev(void)
 {
     mode_t old_umask = umask(0000);
-    errexit(mount("tmpfs", "/dev", "tmpfs", MS_NOSUID | MS_NOEXEC, "size=65536k,mode=755,inode64"));
+    errexit(mount("tmpfs", "/dev", "tmpfs", MS_NOSUID | MS_NOEXEC, "size=65536k,mode=755"));
     errexit(mknod("/dev/null", S_IFCHR | 0666, makedev(1, 3)));
     errexit(mknod("/dev/zero", S_IFCHR | 0666, makedev(1, 5)));
     errexit(mknod("/dev/full", S_IFCHR | 0666, makedev(1, 7)));
@@ -34,7 +34,7 @@ static void setup_mount_dev(void)
     errexit(mount("devpts", "/dev/pts", "devpts", MS_NOSUID | MS_NOEXEC | MS_RELATIME, "gid=5,mode=620,ptmxmode=666"));
     errexit(symlink("/dev/pts/ptmx", "/dev/ptmx"));
     errexit(mkdir("/dev/shm", 0755));
-    errexit(mount("tmpfs", "/dev/shm", "tmpfs", MS_NOSUID | MS_NODEV, "inode64"));
+    errexit(mount("tmpfs", "/dev/shm", "tmpfs", MS_NOSUID | MS_NODEV, NULL));
     errexit(mkdir("/dev/mqueue", 0755));
     errexit(mount("mqueue", "/dev/mqueue", "mqueue", MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_RELATIME, NULL));
     errexit(mkdir("/dev/hugepages", 0755));
