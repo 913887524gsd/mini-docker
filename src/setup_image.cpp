@@ -37,7 +37,7 @@ static void generate_runtime_directory(void)
 
 static void remove_overlay(void)
 {
-    errexit(umount(mergeddir));
+    errexit(umount2(mergeddir, MNT_DETACH));
     free(mergeddir);
 }
 
